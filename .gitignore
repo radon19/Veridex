@@ -1,0 +1,47 @@
+# deps
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# Next.js web
+apps/web/.next/
+apps/web/out/
+apps/web/build/
+
+# Lambda api build
+apps/api/dist/
+apps/api/coverage/
+
+# Hardhat contracts
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/ignition/deployments/
+
+# SAM
+.aws-sam/
+samconfig.toml
+
+# env + secrets — NEVER commit keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# OS + IDE
+.DS_Store
+.vscode/
+.idea/
+
+# logs
+*.log
+npm-debug.log*
+
+# keep these TRACKED — do not ignore:
+# VERIDEX.md
+# README.md
+# infra/template.yaml
