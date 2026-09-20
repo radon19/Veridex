@@ -61,6 +61,11 @@ function SignInBody() {
       </button>
       {!cognitoReady() && <p className="mt-3 text-sm text-gold">set NEXT_PUBLIC_COGNITO_POOL/CLIENT first</p>}
       {msg && <p className="mt-3 text-sm text-gold">{msg}</p>}
+      <div className="mt-6 border border-line bg-tile p-5">
+        <p className="font-display text-sm tracking-wide text-teal">USE THIS FOR DEMO</p>
+        <p className="mt-2 font-hash text-sm">id&nbsp;&nbsp;&nbsp; test1</p>
+        <p className="font-hash text-sm">pass&nbsp; Radon@12345</p>
+      </div>
       <p className="mt-6 text-sm text-dim">
         No account? One is created for you at demo time — <Link href="/docs" className="text-teal">how it works</Link>.
       </p>
