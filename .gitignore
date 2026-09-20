@@ -1,9 +1,9 @@
 # deps
 node_modules/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 bun.lockb
+# NOTE: package-lock.json is COMMITTED on purpose (reproducible Amplify builds)
 
 # Next.js web
 apps/web/.next/
