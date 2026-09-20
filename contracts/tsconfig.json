@@ -1,0 +1,13 @@
+// Editor + typecheck program for Hardhat 3 ESM project
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["hardhat.config.ts", "scripts", "test"],
+  "exclude": ["node_modules", "artifacts", "cache"]
+}
