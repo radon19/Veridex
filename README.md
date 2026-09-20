@@ -23,7 +23,7 @@ Built for **WeMakeDevs × AWS First Commit (Bharat Builds Tour, Sep 17–20 2026
 
 ## Verify live
 
-- **Site:** TBD (Amplify deploy pending)
+- **Site:** `https://main.dahr0mnoq1k3p.amplifyapp.com/`
 - **API health:** `https://r1jmabwu49.execute-api.ap-south-1.amazonaws.com/prod/v1/health`
 - **Contract (Sepolia):** [`0xaf9a48586e4aa7ebafe5258b836939a58ba71a68`](https://sepolia.etherscan.io/address/0xaf9a48586e4aa7ebafe5258b836939a58ba71a68)
 - **App signer:** `0x11f310dd52937D247091f07f88982ba510fe328b` (recover every signature against this)
