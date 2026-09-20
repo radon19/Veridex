@@ -1,0 +1,118 @@
+# Veridex infra — SAM only, no console clicks
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Veridex seal API + private docs + metadata
+
+Parameters:
+  AppSignerAddress:
+    Type: String # public, shown on /health + /verify
+  SbtAddress:
+    Type: String
+    Default: ""
+  ChainId:
+    Type: String
+    Default: "11155111"
+  WebBaseUrl:
+    Type: String
+    Default: ""
+  AppSignerPrivateKey: # weekend only: persists across redeploys; rotate after event
+    Type: String
+    NoEcho: true
+    Default: ""
+  MinterPrivateKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+  ChainRpc:
+    Type: String
+    Default: https://ethereum-sepolia-rpc.publicnode.com
+  IssuerAllowlist: # Cognito subs; empty = any issuer-group member
+    Type: String
+    Default: ""
+
+Resources:
+  # Private PDF bytes, never public
+  DocsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      BucketEncryption: {ServerSideEncryptionConfiguration: [{ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}}]}
+
+  # Hash + sig + status, allowlist
+  VeridexTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: pk, AttributeType: S}, {AttributeName: sk, AttributeType: S}]
+      KeySchema: [{AttributeName: pk, KeyType: HASH}, {AttributeName: sk, KeyType: RANGE}]
+
+  # Login + issuer/verifier boundary
+  IssuerPool:
+    Type: AWS::Cognito::UserPool
+    Properties: {AutoVerifiedAttributes: [email]}
+  IssuerClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref IssuerPool
+      GenerateSecret: false # public client, raw password auth via fetch
+      ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+  IssuerGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: {GroupName: issuer, UserPoolId: !Ref IssuerPool}
+  VerifierGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: {GroupName: verifier, UserPoolId: !Ref IssuerPool}
+
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors: # browsers preflight JSON+Authorization POSTs; SAM adds OPTIONS
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Authorization,Content-Type'"
+        AllowOrigin: "'*'"
+      Auth: # GETs public (health/verify/file/tokens), POSTs need Cognito JWT
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !GetAtt IssuerPool.Arn
+            Identity: {Header: Authorization}
+
+  # Only signer/minter/presigner
+  ApiFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: nodejs24.x
+      MemorySize: 512 # viem + hashing idles near 128MB; headroom is cheap
+      Timeout: 60 # Sepolia mint + receipt polling outlives the 3s default
+      CodeUri: ../apps/api/
+      Handler: dist/src/index.handler
+      Events:
+        GetHealth: {Type: Api, Properties: {Path: /v1/health, Method: GET, RestApiId: !Ref Api}}
+        GetVerify: {Type: Api, Properties: {Path: /v1/verify, Method: GET, RestApiId: !Ref Api}}
+        GetFile: {Type: Api, Properties: {Path: "/v1/docs/{id}/file", Method: GET, RestApiId: !Ref Api, Auth: {Authorizer: CognitoAuth}}}
+        GetToken: {Type: Api, Properties: {Path: "/v1/tokens/{id}", Method: GET, RestApiId: !Ref Api}}
+        PostDocs: {Type: Api, Properties: {Path: /v1/docs, Method: POST, RestApiId: !Ref Api, Auth: {Authorizer: CognitoAuth}}}
+        RevokeDocs: {Type: Api, Properties: {Path: "/v1/docs/{id}/revoke", Method: POST, RestApiId: !Ref Api, Auth: {Authorizer: CognitoAuth}}}
+      Policies: # least privilege, docs/* + one table only
+        - S3CrudPolicy: {BucketName: !Ref DocsBucket}
+        - DynamoDBCrudPolicy: {TableName: !Ref VeridexTable}
+      Environment:
+        Variables:
+          DOCS_BUCKET: !Ref DocsBucket
+          TABLE_NAME: !Ref VeridexTable
+          COGNITO_USER_POOL_ID: !Ref IssuerPool
+          APP_SIGNER_ADDRESS: !Ref AppSignerAddress
+          SBT_ADDRESS: !Ref SbtAddress
+          CHAIN_ID: !Ref ChainId
+          WEB_BASE_URL: !Ref WebBaseUrl
+          APP_SIGNER_PRIVATE_KEY: !Ref AppSignerPrivateKey
+          MINTER_PRIVATE_KEY: !Ref MinterPrivateKey
+          CHAIN_RPC: !Ref ChainRpc
+          ISSUER_ALLOWLIST: !Ref IssuerAllowlist
+
+Outputs:
+  ApiUrl: {Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/prod"}
+  BucketName: {Value: !Ref DocsBucket}
+  TableName: {Value: !Ref VeridexTable}
+  UserPoolId: {Value: !Ref IssuerPool}
+  ClientId: {Value: !Ref IssuerClient}
