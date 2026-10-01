@@ -113,9 +113,6 @@ Admitted: stolen app key breaks everything it signed · allowlisted issuer can s
 
 First app-key EIP-712 flow end to end (Lambda signs, browser recovers); first private-bucket presign loop; soulbound transfer lock wired to a minter role; CORS + binary-upload lessons the hard way (JSON+base64 won); API Gateway v1/v2 event shapes in one router.
 
-## AI tools used
-
-OpenCode with Muse Spark (architecture, implementation, debugging). _Add any others used during the event._
 
 ## Roadmap (known, not built)
 
